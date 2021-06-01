@@ -1,7 +1,6 @@
-from matplotlib.pyplot import bar
+import os
 import numpy as np
 import torch as T
-from torch.autograd import backward
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -9,19 +8,24 @@ import replay_buffer
 
 
 class DeepQNetwork(nn.Module):
-    def __init__(self,lr,input_dims,fc1_dims,fc2_dims,n_actions):
+    def __init__(self, lr, n_actions, name, input_dims, chkpt_dir):
         super(DeepQNetwork,self).__init__()
-        
-        self.input_dims = input_dims
-        self.fc1_dims = fc1_dims
-        self.fc2_dims = fc2_dims
-        self.n_actions = n_actions
 
-        self.fc1 = nn.Linear(*self.input_dims, self.fc1_dims)
-        self.fc2 = nn.Linear(self.fc1_dims, self.fc2_dims)
-        self.fc3 = nn.Linear(self.fc2_dims, self.n_actions)
+        self.checkpoint_dir = chkpt_dir
+        self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
 
-        self.optimizer = optim.Adam(self.parameters(),lr=lr)
+        #conv layer
+        self.conv1 = nn.Conv1d(input_dims[0],20, 1, stride=4)
+        self.conv2 = nn.Conv1d(20, 64, 1, stride=3)
+        self.conv3 = nn.Conv1d(64, 64, 1, stride=2)
+
+        fc_input_dims = self.calculate_conv_output_dims(input_dims)
+
+        self.fc1 = nn.Linear(fc_input_dims, 512)
+        self.dropout = nn.Dropout(p=0.5, inplace=False)
+        self.fc2 = nn.Linear(512, n_actions)
+
+        self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
 
         self.loss = nn.MSELoss()
 
@@ -29,12 +33,31 @@ class DeepQNetwork(nn.Module):
 
         self.to(self.device)
 
+    def calculate_conv_output_dims(self, input_dims):
+        state = T.zeros(1, *input_dims)
+        dims = self.conv1(state)
+        dims = self.conv2(dims)
+        dims = self.conv3(dims)
+        return int(np.prod(dims.size()))
+
     def forward(self, state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
-        actions = self.fc3(x)
+        conv1 = F.relu(self.conv1(state))
+        conv2 = F.relu(self.conv2(conv1))
+        conv3 = F.relu(self.conv3(conv2))
+        conv_state = conv3.view(conv3.size()[0], -1)
+        flat1 = F.relu(self.fc1(conv_state))
+        dropout = self.dropout(flat1)
+        actions = self.fc2(dropout)
 
         return actions
+    
+    def save_checkpoint(self):
+        print('... saving checkpoint ...')
+        T.save(self.state_dict(), self.checkpoint_file)
+
+    def load_checkpoint(self):
+        print('... loading checkpoint ...')
+        self.load_state_dict(T.load(self.checkpoint_file))
 
 class Agent():
     def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
@@ -57,11 +80,15 @@ class Agent():
 
         self.memory = replay_buffer.ReplayBuffer(mem_size, input_dims, n_actions)
 
-        self.q_eval = DeepQNetwork(lr = self.lr, n_actions = self.n_actions,
-                                    input_dims=self.input_dims,fc1_dims=256, fc2_dims=256)
+        self.q_eval = DeepQNetwork(self.lr, self.n_actions,
+                                    input_dims=self.input_dims,
+                                    name=self.env_name+'_'+self.algo+'_q_eval',
+                                    chkpt_dir=self.chkpt_dir)
 
-        self.q_next = DeepQNetwork(lr = self.lr, n_actions = self.n_actions,
-                                    input_dims=self.input_dims,fc1_dims=256, fc2_dims=256)
+        self.q_next = DeepQNetwork(self.lr, self.n_actions,
+                                    input_dims=self.input_dims,
+                                    name=self.env_name+'_'+self.algo+'_q_next',
+                                    chkpt_dir=self.chkpt_dir)
 
     def store_transition(self, state, action, reward, state_, done):
         self.memory.store_transition(state, action, reward, state_, done)
@@ -76,6 +103,14 @@ class Agent():
         states_ = T.tensor(new_state).to(self.q_eval.device)
 
         return states, actions, rewards, states_, dones
+
+    def save_models(self):
+        self.q_eval.save_checkpoint()
+        self.q_next.save_checkpoint()
+
+    def load_models(self):
+        self.q_eval.load_checkpoint()
+        self.q_next.load_checkpoint()
 
     def choose_action(self, observation):
         if np.random.random() > self.epsilon:

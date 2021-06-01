@@ -64,7 +64,7 @@ class Parameters:
         self.unseen = False  # change random seed to generate unseen example
 
         # supervised learning mimic policy
-        self.batch_size = 1
+        self.batch_size = 100
         self.evaluate_policy_name = "SJF"
 
     def compute_dependent_parameters(self):

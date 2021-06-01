@@ -11,15 +11,13 @@ import torch as T
 pa = parameters.Parameters()
 env = enivronment.Env(pa)
 
-#agent = pg_network.Agent(gamma=0.99, epsilon=1e-8,batch_size=1,n_actions=pa.network_output_dim,
-#               input_dims=[pa.network_compact_dim],eps_end=0.01, lr=0.001)
 
 agent = pg_network.Agent(gamma=0.99, epsilon=1, lr=0.0001,
-                     input_dims=[pa.network_compact_dim],
+                     input_dims=[pa.network_input_height,pa.network_input_width],
                      n_actions=pa.network_output_dim, mem_size=50000, eps_min=0.1,
-                     batch_size=32, replace=1000, eps_dec=1e-5,
+                     batch_size=100, replace=1000, eps_dec=1e-5,
                      chkpt_dir='models/', algo='DQNAgent',
-                     env_name='PongNoFrameskip-v4')
+                     env_name='deep-rm')
 scores, eps_history = [], [] 
 
 n_games = 500
