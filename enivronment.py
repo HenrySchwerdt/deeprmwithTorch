@@ -206,7 +206,7 @@ class Env:
         plt.imshow(extra_info, interpolation='nearest', vmax=1)
 
         plt.show()     # manual
-        # plt.pause(0.01)  # automatic
+        plt.pause(0.01)  # automatic
 
     def get_reward(self):
 
