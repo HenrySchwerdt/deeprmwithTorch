@@ -13,9 +13,9 @@ pa = parameters.Parameters()
 env = enivronment.Env(pa, render=True)
 
 agent = pg_network.Agent(gamma=0.99, epsilon=1, lr=0.0001,
-                     input_dims=[pa.network_input_height,pa.network_input_width],
+                     input_dims=[pa.network_compact_dim],
                      n_actions=pa.network_output_dim, mem_size=50000, eps_min=0.1,
-                     batch_size=100, replace=1000, eps_dec=1e-5,
+                     batch_size=10, replace=1000, eps_dec=1e-5,
                      chkpt_dir='models/', algo='DQNAgent',
                      env_name='deep-rm')
 
@@ -28,8 +28,9 @@ done = False
 
 # deeprm network
 while not done:
-    action = agent.choose_action(observation)
-    observation_, reward, done, info = env.step(action)
+    action = agent.q_eval.forward(T.tensor(observation)).argmax()
+    
+    observation, reward, done, info = env.step(action.item())
     print(reward)
 
 env.reset()

@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import replay_buffer
+from torch.distributions import Bernoulli
+from torch.autograd import Variable
 
 
 class DeepQNetwork(nn.Module):
@@ -15,15 +17,18 @@ class DeepQNetwork(nn.Module):
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
 
         #conv layer
-        self.conv1 = nn.Conv1d(input_dims[0],20, 1, stride=4)
-        self.conv2 = nn.Conv1d(20, 64, 1, stride=3)
-        self.conv3 = nn.Conv1d(64, 64, 1, stride=2)
+        #self.conv1 = nn.Conv1d(input_dims[0],20, 1, stride=4)
+        #self.conv2 = nn.Conv1d(20, 64, 1, stride=3)
+        #self.conv3 = nn.Conv1d(64, 64, 1, stride=2)
 
-        fc_input_dims = self.calculate_conv_output_dims(input_dims)
-
-        self.fc1 = nn.Linear(fc_input_dims, 512)
-        self.dropout = nn.Dropout(p=0.5, inplace=False)
-        self.fc2 = nn.Linear(512, n_actions)
+        
+        
+        #fc_input_dims = self.calculate_conv_output_dims(input_dims)
+        self.fc1 = nn.Linear(input_dims[0], 512)
+        #self.dropout = nn.Dropout(p=0.5, inplace=False)
+        self.fc2 = nn.Linear(512, 512)
+        self.fc3 = nn.Linear(512, 512)
+        self.fc4 = nn.Linear(512, n_actions)
 
         self.optimizer = optim.RMSprop(self.parameters(), lr=lr)
 
@@ -41,14 +46,17 @@ class DeepQNetwork(nn.Module):
         return int(np.prod(dims.size()))
 
     def forward(self, state):
-        conv1 = F.relu(self.conv1(state))
-        conv2 = F.relu(self.conv2(conv1))
-        conv3 = F.relu(self.conv3(conv2))
-        conv_state = conv3.view(conv3.size()[0], -1)
-        flat1 = F.relu(self.fc1(conv_state))
-        dropout = self.dropout(flat1)
-        actions = self.fc2(dropout)
-
+        #conv1 = F.relu(self.conv1(state))
+        #conv2 = F.relu(self.conv2(conv1))
+        #conv3 = F.relu(self.conv3(conv2))
+        #conv_state = conv3.view(conv3.size()[0], -1)
+        #flat1 = F.relu(self.fc1(conv_state))
+        #dropout = self.dropout(flat1)
+        #actions = self.fc2(dropout)
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        actions = F.sigmoid(self.fc4(x))
         return actions
     
     def save_checkpoint(self):
@@ -114,10 +122,12 @@ class Agent():
 
     def choose_action(self, observation):
         if np.random.random() > self.epsilon:
+            print("NETWORK")
             state = T.tensor([observation],dtype=T.float).to(self.q_eval.device)
             actions = self.q_eval.forward(state)
             action = T.argmax(actions).item()
         else:
+            print("RANDOM")
             action = np.random.choice(self.action_space)
 
         return action

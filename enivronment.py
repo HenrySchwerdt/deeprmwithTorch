@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 class Env:
     def __init__(self, pa, nw_len_seqs=None, nw_size_seqs=None,
-                 seed=42, render=False, repre='image', end='all_done'):
+                 seed=42, render=False, repre='compact', end='no_new_job'):
 
         self.pa = pa
         self.render = render
@@ -221,13 +221,11 @@ class Env:
             if j is not None:
                 reward += self.pa.dismiss_penalty / float(j.len)
 
-        print(reward)
         return reward
 
     def step(self, a, repeat=False):
 
         status = None
-
         done = False
         reward = 0
         info = None

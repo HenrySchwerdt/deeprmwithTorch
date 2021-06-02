@@ -12,17 +12,16 @@ import util
 pa = parameters.Parameters()
 env = enivronment.Env(pa)
 
-
-agent = pg_network.Agent(gamma=0.99, epsilon=0.99, lr=0.0001,
-                     input_dims=[pa.network_input_height,pa.network_input_width],
-                     n_actions=pa.network_output_dim, mem_size=50000, eps_min=0.1,
-                     batch_size=10, replace=1000, eps_dec=1e-4,
+agent = pg_network.Agent(gamma=1, epsilon=1.0, lr=0.00001,
+                     input_dims=[pa.network_compact_dim],
+                     n_actions=pa.network_output_dim, mem_size=100000, eps_min=0.1,
+                     batch_size=64, replace=1000, eps_dec=1e-4,
                      chkpt_dir='models/', algo='DQNAgent',
                      env_name='deep-rm')
 
 best_score = -np.inf
 load_checkpoint = False
-n_games = 500
+n_games = 1000
 
 if load_checkpoint:
         agent.load_models()
@@ -55,9 +54,9 @@ for i in range(n_games):
     steps_array.append(n_steps)
 
     avg_score = np.mean(scores[-100:])
-    print('episode: ', i,'score: ', score,
-             ' average score %.1f' % avg_score, 'best score %.2f' % best_score,
-            'epsilon %.2f' % agent.epsilon, 'steps', n_steps)
+    #print('episode: ', i,'score: ', score,
+    #         ' average score %.1f' % avg_score, 'best score %.2f' % best_score,
+    #        'epsilon %.2f' % agent.epsilon, 'steps', n_steps)
 
     if avg_score > best_score:
         if not load_checkpoint:

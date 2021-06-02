@@ -7,7 +7,7 @@ class Parameters:
     def __init__(self):
         self.output_filename = 'data/tmp'
         self.num_epochs = 10000         # number of training epochs
-        self.simu_len = 20             # length of the busy cycle that repeats itself
+        self.simu_len = 30             # length of the busy cycle that repeats itself
         self.num_ex = 10                # number of sequences
 
         self.output_freq = 10          # interval for output and store parameters
@@ -29,7 +29,7 @@ class Parameters:
 
         self.job_num_cap = 40          # maximum number of distinct colors in current work graph
 
-        self.new_job_rate = 0.5        # lambda in new job arrival Poisson Process
+        self.new_job_rate = 0.8        # lambda in new job arrival Poisson Process
 
         self.discount = 1           # discount factor
 
@@ -52,8 +52,8 @@ class Parameters:
 
         self.network_output_dim = self.num_nw + 1  # + 1 for void action
 
-        self.delay_penalty = -1       # penalty for delaying things in the current work screen
-        self.hold_penalty = -1        # penalty for holding things in the new work screen
+        self.delay_penalty = 1       # penalty for delaying things in the current work screen
+        self.hold_penalty = -1      # penalty for holding things in the new work screen
         self.dismiss_penalty = -1     # penalty for missing a job because the queue is full
 
         self.num_frames = 1           # number of frames to combine and process
@@ -61,10 +61,10 @@ class Parameters:
         self.rms_rho = 0.9            # for rms prop
         self.rms_eps = 1e-9           # for rms prop
 
-        self.unseen = False  # change random seed to generate unseen example
+        self.unseen = True  # change random seed to generate unseen example
 
         # supervised learning mimic policy
-        self.batch_size = 10
+        self.batch_size = 64
         self.evaluate_policy_name = "SJF"
 
     def compute_dependent_parameters(self):
