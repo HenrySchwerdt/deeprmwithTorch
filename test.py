@@ -30,6 +30,7 @@ done = False
 while not done:
     action = agent.choose_action(observation)
     observation_, reward, done, info = env.step(action)
+    print(reward)
 
 env.reset()
 done = False
@@ -38,4 +39,4 @@ print('packer')
 while not done:
     action = other_agents.get_packer_action(env.machine,env.job_slot)
     observation_, reward, done, info = env.step(action)
-
+    print(reward)
