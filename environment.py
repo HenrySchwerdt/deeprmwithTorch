@@ -182,7 +182,7 @@ class Env:
 
         skip_row -= 1
         backlog_width = int(math.ceil(self.pa.backlog_size / float(self.pa.time_horizon)))
-        print(backlog_width)
+        # print(backlog_width)
         backlog = np.zeros((self.pa.time_horizon, backlog_width))
 
         backlog[: self.job_backlog.curr_size // backlog_width, : backlog_width] = 1

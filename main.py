@@ -1,7 +1,7 @@
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-import enivronment
+import environment
 import parameters
 import pg_network
 import numpy as np
@@ -10,18 +10,14 @@ import util
 
 
 pa = parameters.Parameters()
-env = enivronment.Env(pa)
+pa.compute_dependent_parameters()
+env = environment.Env(pa)
 
-agent = pg_network.Agent(gamma=1, epsilon=1.0, lr=0.00001,
-                     input_dims=[pa.network_compact_dim],
-                     n_actions=pa.network_output_dim, mem_size=100000, eps_min=0.1,
-                     batch_size=64, replace=1000, eps_dec=1e-4,
-                     chkpt_dir='models/', algo='DQNAgent',
-                     env_name='deep-rm')
+agent = pg_network.Agent(pa)
 
 best_score = -np.inf
 load_checkpoint = False
-n_games = 1000
+n_games = 400
 
 if load_checkpoint:
         agent.load_models()
@@ -60,6 +56,7 @@ for i in range(n_games):
 
     if avg_score > best_score:
         if not load_checkpoint:
+            print("saving")
             agent.save_models()
         best_score = avg_score
 

@@ -7,6 +7,7 @@ import torch.optim as optim
 import replay_buffer
 from torch.distributions import Bernoulli
 from torch.autograd import Variable
+import parameters
 
 
 class DeepQNetwork(nn.Module):
@@ -16,16 +17,7 @@ class DeepQNetwork(nn.Module):
         self.checkpoint_dir = chkpt_dir
         self.checkpoint_file = os.path.join(self.checkpoint_dir, name)
 
-        #conv layer
-        #self.conv1 = nn.Conv1d(input_dims[0],20, 1, stride=4)
-        #self.conv2 = nn.Conv1d(20, 64, 1, stride=3)
-        #self.conv3 = nn.Conv1d(64, 64, 1, stride=2)
-
-        
-        
-        #fc_input_dims = self.calculate_conv_output_dims(input_dims)
         self.fc1 = nn.Linear(input_dims[0], 512)
-        #self.dropout = nn.Dropout(p=0.5, inplace=False)
         self.fc2 = nn.Linear(512, 512)
         self.fc3 = nn.Linear(512, 512)
         self.fc4 = nn.Linear(512, n_actions)
@@ -46,13 +38,6 @@ class DeepQNetwork(nn.Module):
         return int(np.prod(dims.size()))
 
     def forward(self, state):
-        #conv1 = F.relu(self.conv1(state))
-        #conv2 = F.relu(self.conv2(conv1))
-        #conv3 = F.relu(self.conv3(conv2))
-        #conv_state = conv3.view(conv3.size()[0], -1)
-        #flat1 = F.relu(self.fc1(conv_state))
-        #dropout = self.dropout(flat1)
-        #actions = self.fc2(dropout)
         x = F.relu(self.fc1(state))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
@@ -60,33 +45,31 @@ class DeepQNetwork(nn.Module):
         return actions
     
     def save_checkpoint(self):
-        print('... saving checkpoint ...')
+        # print('... saving checkpoint ...')
         T.save(self.state_dict(), self.checkpoint_file)
 
     def load_checkpoint(self):
-        print('... loading checkpoint ...')
+        # print('... loading checkpoint ...')
         self.load_state_dict(T.load(self.checkpoint_file))
 
 class Agent():
-    def __init__(self, gamma, epsilon, lr, n_actions, input_dims,
-                 mem_size, batch_size, eps_min=0.01, eps_dec=5e-7,
-                 replace=1000, algo=None, env_name=None, chkpt_dir='tmp/dqn'):
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.lr = lr
-        self.n_actions = n_actions
-        self.input_dims = input_dims
-        self.batch_size = batch_size
-        self.eps_min = eps_min
-        self.eps_dec = eps_dec
-        self.replace_target_cnt = replace
+    def __init__(self, pa, algo="DQNAgent", env_name="deep-rm", chkpt_dir='models'):
+        self.gamma = pa.discount
+        self.epsilon = pa.epsilon
+        self.lr = pa.lr_rate
+        self.n_actions = pa.network_output_dim
+        self.input_dims = [pa.network_compact_dim]
+        self.batch_size = pa.batch_size
+        self.eps_min = pa.eps_min
+        self.eps_dec = pa.eps_dec
+        self.replace_target_cnt = pa.replace
         self.algo = algo
         self.env_name = env_name
         self.chkpt_dir = chkpt_dir
-        self.action_space = [i for i in range(n_actions)]
+        self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
 
-        self.memory = replay_buffer.ReplayBuffer(mem_size, input_dims, n_actions)
+        self.memory = replay_buffer.ReplayBuffer(pa.mem_size, self.input_dims, self.n_actions)
 
         self.q_eval = DeepQNetwork(self.lr, self.n_actions,
                                     input_dims=self.input_dims,
@@ -122,15 +105,21 @@ class Agent():
 
     def choose_action(self, observation):
         if np.random.random() > self.epsilon:
-            print("NETWORK")
             state = T.tensor([observation],dtype=T.float).to(self.q_eval.device)
             actions = self.q_eval.forward(state)
             action = T.argmax(actions).item()
         else:
-            print("RANDOM")
             action = np.random.choice(self.action_space)
 
         return action
+
+    def get_paramters(self):
+        return self.q_eval.parameters(), self.q_next.parameters()
+
+
+    def update_parameters(self,q_eval_parameter, q_next_parameter):
+        self.q_eval.load_state_dict(q_eval_parameter)
+        self.q_next.load_state_dict(q_next_parameter)
 
     def replace_target_network(self):
         if self.learn_step_counter % self.replace_target_cnt == 0:

@@ -1,7 +1,7 @@
 import os
 
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-import enivronment
+import environment
 import parameters
 import pg_network
 import numpy as np
@@ -10,14 +10,10 @@ import util
 import other_agents
 
 pa = parameters.Parameters()
-env = enivronment.Env(pa, render=True)
+pa.compute_dependent_parameters()
+env = environment.Env(pa, render=True)
 
-agent = pg_network.Agent(gamma=0.99, epsilon=1, lr=0.0001,
-                     input_dims=[pa.network_compact_dim],
-                     n_actions=pa.network_output_dim, mem_size=50000, eps_min=0.1,
-                     batch_size=10, replace=1000, eps_dec=1e-5,
-                     chkpt_dir='models/', algo='DQNAgent',
-                     env_name='deep-rm')
+agent = pg_network.Agent(pa)
 
 #loads best computed models
 agent.load_models()
@@ -25,19 +21,24 @@ agent.load_models()
 observation = env.observe()
 done = False
 
-
+total_reward = 0
 # deeprm network
 while not done:
     action = agent.q_eval.forward(T.tensor(observation)).argmax()
-    
+    print(action)
     observation, reward, done, info = env.step(action.item())
-    print(reward)
+    total_reward += reward
 
 env.reset()
+print(total_reward)
+total_reward = 0
 done = False
 #get_packer_action
 print('packer')
 while not done:
     action = other_agents.get_packer_action(env.machine,env.job_slot)
     observation_, reward, done, info = env.step(action)
-    print(reward)
+    total_reward += reward
+
+print(total_reward)
+
